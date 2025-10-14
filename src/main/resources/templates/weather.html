@@ -35,6 +35,9 @@
                 const data = await response.json();
                 let html = '';
                 html += `<h3 style='color:#1976d2;'>${data.displayName || data.address}</h3>`;
+                if (typeof data.fromCache !== 'undefined') {
+                    html += `<div style='margin-bottom:8px;'><span style='font-size:0.95rem;color:${data.fromCache ? '#888' : '#388e3c'};'>${data.fromCache ? 'Data from cache (≤30 min old)' : 'Fresh data'}</span></div>`;
+                }
                 if (data.currentWeather) {
                     // Determine icon based on weather code or description
                     let icon = '';

@@ -6,13 +6,35 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import java.util.Map;
 import java.util.LinkedHashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.time.Instant;
 
 @Service
 public class WeatherService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    // Simple in-memory cache: key=address, value=CacheEntry
+    private static class CacheEntry {
+        WeatherResponse response;
+        Instant timestamp;
+        CacheEntry(WeatherResponse response, Instant timestamp) {
+            this.response = response;
+            this.timestamp = timestamp;
+        }
+    }
+    private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
+    private static final long CACHE_DURATION_SECONDS = 1800; // 30 minutes
+
     public WeatherResponse getWeather(String address) {
+        Instant now = Instant.now();
+        CacheEntry entry = cache.get(address.toLowerCase());
+        if (entry != null && now.getEpochSecond() - entry.timestamp.getEpochSecond() < CACHE_DURATION_SECONDS) {
+            WeatherResponse cached = entry.response;
+            cached.setFromCache(true);
+            return cached;
+        }
+
         String geoUrl = UriComponentsBuilder.fromHttpUrl("https://nominatim.openstreetmap.org/search")
                 .queryParam("q", address)
                 .queryParam("format", "json")
@@ -34,8 +56,8 @@ public class WeatherService {
         Map<String, Object> addressDetails = new LinkedHashMap<>();
         if (geoData.containsKey("address")) {
             Map<String, Object> addr = (Map<String, Object>) geoData.get("address");
-            for (Map.Entry<String, Object> entry : addr.entrySet()) {
-                addressDetails.put(entry.getKey(), entry.getValue());
+            for (Map.Entry<String, Object> entry2 : addr.entrySet()) {
+                addressDetails.put(entry2.getKey(), entry2.getValue());
             }
         }
 
@@ -58,6 +80,10 @@ public class WeatherService {
         if (!addressDetails.isEmpty()) {
             response.getCurrentWeather().put("address_details", addressDetails);
         }
+        response.setFromCache(false);
+
+        // Cache the response
+        cache.put(address.toLowerCase(), new CacheEntry(response, now));
 
         return response;
     }

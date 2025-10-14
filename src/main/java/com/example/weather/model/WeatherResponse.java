@@ -9,4 +9,5 @@ public class WeatherResponse {
     private String displayName;
     private Map<String, Object> currentWeather;
     private Map<String, Object> forecast;
+    private boolean fromCache;
 }
