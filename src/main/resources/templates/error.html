@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Weather API Error</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f8f8f8; margin: 0; padding: 0; }
+        .container { max-width: 500px; margin: 60px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 32px; }
+        h2 { color: #d32f2f; }
+        .error-details { color: #333; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Error Occurred</h2>
+        <div class="error-details">
+            <p th:text="${errorMessage}">An error occurred while fetching weather data.</p>
+        </div>
+    </div>
+</body>
+</html>

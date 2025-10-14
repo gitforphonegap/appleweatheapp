@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Weather Lookup</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f8f8f8; margin: 0; padding: 0; }
+        .container { max-width: 500px; margin: 60px auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 32px; }
+        h2 { color: #1976d2; }
+        label, input, button { font-size: 1rem; }
+        .result { margin-top: 24px; padding: 16px; background: #e3f2fd; border-radius: 6px; }
+        .error { color: #d32f2f; margin-top: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Weather Lookup</h2>
+        <form id="weatherForm">
+            <label for="address">Enter Address:</label><br>
+            <input type="text" id="address" name="address" required style="width: 80%; padding: 8px; margin: 12px 0;">
+            <button type="submit">Get Weather</button>
+        </form>
+    <div id="weatherResult" class="result" style="display:none;"></div>
+    <div id="errorMsg" class="error"></div>
+    </div>
+    <script>
+        document.getElementById('weatherForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            document.getElementById('weatherResult').style.display = 'none';
+            document.getElementById('errorMsg').textContent = '';
+            const address = document.getElementById('address').value;
+            try {
+                const response = await fetch(`/api/weather?address=${encodeURIComponent(address)}`);
+                if (!response.ok) throw new Error('Weather not found for this address.');
+                const data = await response.json();
+                let html = '';
+                html += `<h3 style='color:#1976d2;'>${data.displayName || data.address}</h3>`;
+                if (data.currentWeather) {
+                    // Determine icon based on weather code or description
+                    let icon = '';
+                    let weatherCode = data.currentWeather.weathercode || data.currentWeather.weather_code || null;
+                    let tempDesc = '';
+                    // Open-Meteo weather codes: 0=clear, 1/2/3=cloudy, 45/48=fog, 51-67=drizzle, 80-99=rain/snow
+                    if (weatherCode !== undefined && weatherCode !== null) {
+                        weatherCode = parseInt(weatherCode);
+                        if (weatherCode === 0) {
+                            icon = '☀️'; tempDesc = 'Clear Sky';
+                        } else if ([1,2,3,45,48].includes(weatherCode)) {
+                            icon = '☁️'; tempDesc = 'Cloudy/Overcast';
+                        } else if ((weatherCode >= 51 && weatherCode <= 67) || (weatherCode >= 80 && weatherCode <= 99)) {
+                            icon = '🌧️'; tempDesc = 'Rainy/Showers';
+                        } else {
+                            icon = '🌡️'; tempDesc = 'Unknown';
+                        }
+                    }
+                    html += `<div style='display:flex;align-items:center;gap:16px;'><div style='font-size:3rem;'>${icon}</div><div><b>Current Weather</b><br><span style='font-size:1.1rem;'>${tempDesc}</span></div></div>`;
+                    html += `<ul style='list-style:none;padding:0;margin-top:10px;'>`;
+                    for (const [k, v] of Object.entries(data.currentWeather)) {
+                        if (k === 'weathercode' || k === 'weather_code') continue;
+                        html += `<li><b>${k.replace(/_/g,' ')}:</b> ${v}</li>`;
+                    }
+                    html += `</ul>`;
+                }
+                if (data.forecast) {
+                    html += `<div style='margin-top:18px;'><b>Forecast</b><table style='width:100%;border-collapse:collapse;margin-top:8px;'><thead><tr>`;
+                    // Get forecast keys and assume all arrays are same length
+                    const keys = Object.keys(data.forecast);
+                    for (const k of keys) {
+                        html += `<th style='border-bottom:1px solid #bbb;padding:4px;'>${k.replace(/_/g,' ')}</th>`;
+                    }
+                    html += `</tr></thead><tbody>`;
+                    const len = data.forecast[keys[0]].length;
+                    for (let i = 0; i < len; i++) {
+                        html += '<tr>';
+                        for (const k of keys) {
+                            html += `<td style='padding:4px;text-align:center;'>${data.forecast[k][i]}</td>`;
+                        }
+                        html += '</tr>';
+                    }
+                    html += `</tbody></table></div>`;
+                }
+                document.getElementById('weatherResult').innerHTML = html;
+                document.getElementById('weatherResult').style.display = 'block';
+            } catch (err) {
+                document.getElementById('errorMsg').textContent = err.message;
+            }
+        });
+    </script>
+</body>
+</html>
